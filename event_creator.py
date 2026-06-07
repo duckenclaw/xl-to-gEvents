@@ -37,6 +37,8 @@ class EventCreator:
             },
             'description': EventCreator._build_description(parsed_event),
             'location': parsed_event['classroom'] if not parsed_event['is_online'] else 'Online',
+            # Marker so sync can find & wipe only its own events on the calendar.
+            'extendedProperties': {'private': {'appId': 'xl-to-gEvents'}},
         }
 
         if parsed_event['is_online']:

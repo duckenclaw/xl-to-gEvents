@@ -89,6 +89,46 @@ class GoogleCalendarAPI:
             print(f"Error deleting event: {e}")
             return False
 
+    def list_managed_events(self, calendar_id='primary', time_min=None, time_max=None):
+        # List events this script created (tagged appId=xl-to-gEvents), within
+        # an optional [time_min, time_max] window. Handles pagination.
+        events = []
+        page_token = None
+
+        while True:
+            params = {
+                'calendarId': calendar_id,
+                'privateExtendedProperty': 'appId=xl-to-gEvents',
+                'singleEvents': True,
+                'maxResults': 2500,
+                'pageToken': page_token,
+            }
+            if time_min:
+                params['timeMin'] = time_min
+            if time_max:
+                params['timeMax'] = time_max
+
+            result = self.service.events().list(**params).execute()
+            events.extend(result.get('items', []))
+
+            page_token = result.get('nextPageToken')
+            if not page_token:
+                break
+
+        return events
+
+    def delete_events(self, event_ids, calendar_id='primary'):
+        # Delete many events by id, tracking successes/failures.
+        deleted = 0
+        failed = 0
+        for idx, event_id in enumerate(event_ids, 1):
+            print(f"Deleting event {idx}/{len(event_ids)}...")
+            if self.delete_event(event_id, calendar_id):
+                deleted += 1
+            else:
+                failed += 1
+        return {'deleted': deleted, 'failed': failed, 'total': len(event_ids)}
+
     def get_events(self, calendar_id='primary', max_results=10):
         # Get upcoming events
         from datetime import datetime

@@ -1,5 +1,9 @@
 credentials.json
 token.pickle
 venv
+.env
 .idea
 __pycache__
+.auth
+assets/schedule.prev.xlsx
+.DS_Store

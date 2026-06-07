@@ -11,6 +11,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install the browser used for automated login (one-time)
+python -m playwright install chromium
 ```
 
 ```bash
@@ -24,6 +27,53 @@ deactivate # to exit venv virtual environment
 3. Enable Google Calendar API
 4. Create OAuth 2.0 credentials (Desktop app)
 5. Download credentials as `credentials.json` and place in project root
+
+## Automated sync (download + update calendar)
+
+`sync` logs in, downloads the newest schedule `.xlsx` from the university file
+repository, and mirrors it onto your calendar — deleting the previous events it
+created and recreating them from the new file, so the calendar always matches
+the latest schedule.
+
+### `.env` configuration
+
+Create a `.env` file in the project root:
+
+```
+# Google calendar to mirror the schedule onto
+CALENDAR_ID=your_calendar_id@group.calendar.google.com
+
+# University Microsoft / Azure AD login
+AZURE_LOGIN=you@uni.example
+AZURE_PASSWORD=your_password
+
+# The student-platform page URL (the "File repository" address in your browser)
+PLATFORM_URL=https://...
+
+# Optional: override the schedule file GUID (defaults to the known one)
+# SCHEDULE_FILE_ID=5c1d20da-dd43-4966-971d-5e76d59dc4d8
+
+# Optional: paste a bearer token manually to skip the browser login entirely
+# SCHEDULE_TOKEN=eyJ...
+```
+
+The token is obtained automatically by driving the login in a headless browser
+and capturing the session's bearer token. The session is cached in `.auth/`
+(gitignored); the credential login only re-runs when that session expires. If
+Microsoft shows an MFA prompt, a visible browser opens so you can complete it.
+
+### Commands
+
+```bash
+# Preview: download + show what would change, without touching the calendar
+python main.py sync --dry-run
+
+# Download the newest schedule and update the calendar
+python main.py sync
+
+# Re-run against the already-downloaded file (skip the browser/download)
+python main.py sync --no-download
+```
 
 ## Usage
 

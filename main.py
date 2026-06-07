@@ -3,6 +3,7 @@ import sys
 from xlsx_parser import ScheduleParser
 from event_creator import EventCreator
 from google_api import GoogleCalendarAPI
+import sync as sync_module
 
 def test_parser(xlsx_file):
 
@@ -122,6 +123,11 @@ def main():
     pipeline.add_argument('--calendar', default='primary', help='Calendar ID (default: primary)')
     pipeline.add_argument('--dry-run', action='store_true', help='Show what would be created without actually creating')
 
+    # Sync: download newest schedule and mirror it onto CALENDAR_ID (.env)
+    sync_cmd = subparsers.add_parser('sync', help='Download newest schedule and update calendar')
+    sync_cmd.add_argument('--dry-run', action='store_true', help='Show what would change without touching the calendar')
+    sync_cmd.add_argument('--no-download', action='store_true', help='Reuse existing assets/schedule.xlsx instead of downloading')
+
     args = parser.parse_args()
 
     if not args.command:
@@ -137,6 +143,8 @@ def main():
             test_google_api()
         elif args.command == 'run':
             full_pipeline(args.xlsx_file, args.calendar, args.dry_run)
+        elif args.command == 'sync':
+            sync_module.sync(dry_run=args.dry_run, download=not args.no_download)
     except Exception as e:
         print(f"\nError: {e}", file=sys.stderr)
         sys.exit(1)
