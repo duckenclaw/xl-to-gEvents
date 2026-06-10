@@ -103,6 +103,16 @@ def _read_token_from_storage(page):
         return None
 
 
+def _settle(page):
+    """Give the SPA a moment to bootstrap and fire its first authenticated API
+    call. networkidle can legitimately time out on apps that long-poll, so it's
+    best-effort."""
+    try:
+        page.wait_for_load_state('networkidle', timeout=10000)
+    except Exception:
+        pass
+
+
 def _wait_for_token(page, holder, timeout):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -206,7 +216,8 @@ def _try_saved_session():
             page = context.new_page()
             holder = _attach_capture(context)
             page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded')
-            token = _wait_for_token(page, holder, timeout=15)
+            _settle(page)
+            token = _wait_for_token(page, holder, timeout=25)
             if token:
                 _save_state(context)
             return token
@@ -225,7 +236,8 @@ def _full_login(headless):
             holder = _attach_capture(context)
             page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded')
             _perform_login(page, headless)
-            token = _wait_for_token(page, holder, timeout=30)
+            _settle(page)
+            token = _wait_for_token(page, holder, timeout=40)
             if not token:
                 raise NeedsInteraction("No token captured after login")
             _save_state(context)

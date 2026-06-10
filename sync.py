@@ -17,16 +17,27 @@ from xlsx_parser import ScheduleParser
 DEFAULT_XLSX = 'assets/schedule.xlsx'
 
 
+def _resolve_and_download(token):
+    """Resolve the current file id by name (unless pinned) and download it."""
+    if config.SCHEDULE_FILE_ID:
+        file_id = config.SCHEDULE_FILE_ID
+        print(f"  Using pinned SCHEDULE_FILE_ID -> {file_id}")
+    else:
+        file_id = schedule_downloader.find_file_id(token)
+        print(f"  Resolved {config.SCHEDULE_FILE_NAME!r} -> {file_id}")
+    return schedule_downloader.download_schedule(token, DEFAULT_XLSX, file_id=file_id)
+
+
 def _download_with_retry():
-    """Get a token and download, refreshing the session once on a 401."""
+    """Get a token, resolve the file, and download — refreshing once on a 401."""
     token = token_provider.get_token()
     try:
-        return schedule_downloader.download_schedule(token, DEFAULT_XLSX)
+        return _resolve_and_download(token)
     except TokenExpiredError:
         print("Token rejected (401); refreshing session and retrying once…")
         token_provider.invalidate_session()
         token = token_provider.get_token()
-        return schedule_downloader.download_schedule(token, DEFAULT_XLSX)
+        return _resolve_and_download(token)
 
 
 def _range_for(parsed_events):

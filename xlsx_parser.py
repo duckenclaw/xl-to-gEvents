@@ -6,7 +6,15 @@ import re
 class ScheduleParser:
     def __init__(self, xlsx_path):
         self.workbook = load_workbook(xlsx_path)
-        self.sheet = self.workbook.active
+        self.sheet = self._select_schedule_sheet()
+
+    def _select_schedule_sheet(self):
+        # The weekly schedule lives on the 'PLAN' sheet; the file may also have a
+        # 'SESJA' (exam) sheet and leave it active, so don't trust workbook.active.
+        for name in self.workbook.sheetnames:
+            if name.strip().upper() == 'PLAN':
+                return self.workbook[name]
+        return self.workbook.active
 
     def parse(self):
         events = []

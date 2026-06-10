@@ -50,8 +50,16 @@ AZURE_PASSWORD=your_password
 # The student-platform page URL (the "File repository" address in your browser)
 PLATFORM_URL=https://...
 
-# Optional: override the schedule file GUID (defaults to the known one)
-# SCHEDULE_FILE_ID=5c1d20da-dd43-4966-971d-5e76d59dc4d8
+# Optional: schedule file name to look up (defaults to the value below).
+# The file's GUID rotates on every re-upload, so it is resolved by name each run.
+# SCHEDULE_FILE_NAME=Informatyka - niestacjonarne - semestr 02
+
+# Optional: override the repository listing endpoint if the default is wrong
+# (paste the exact XHR URL from the File-repository page in DevTools).
+# REPO_LIST_URL=https://api-dziekanat.wst.com.pl/api/repozytorium-plikow/platforma-studenta/pliki-do-pobrania
+
+# Optional: pin a specific file GUID instead of name lookup
+# SCHEDULE_FILE_ID=5c520ab7-e6e0-4346-9a60-39e7d1b2112b
 
 # Optional: paste a bearer token manually to skip the browser login entirely
 # SCHEDULE_TOKEN=eyJ...
