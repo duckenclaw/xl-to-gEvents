@@ -215,7 +215,7 @@ def _try_saved_session():
         try:
             page = context.new_page()
             holder = _attach_capture(context)
-            page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded')
+            page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded', timeout=60000)
             _settle(page)
             token = _wait_for_token(page, holder, timeout=25)
             if token:
@@ -234,7 +234,7 @@ def _full_login(headless):
         try:
             page = context.new_page()
             holder = _attach_capture(context)
-            page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded')
+            page.goto(config.require('PLATFORM_URL'), wait_until='domcontentloaded', timeout=60000)
             _perform_login(page, headless)
             _settle(page)
             token = _wait_for_token(page, holder, timeout=40)

@@ -117,6 +117,53 @@ class GoogleCalendarAPI:
 
         return events
 
+    def delete_all_events(self, calendar_id='primary'):
+        # Delete EVERY event on the calendar. Re-lists after each batch so it
+        # fully drains regardless of count; stops if a pass makes no progress
+        # (e.g. all deletes failing) to avoid looping forever.
+        deleted = 0
+        failed = 0
+        while True:
+            result = self.service.events().list(
+                calendarId=calendar_id,
+                maxResults=2500,
+                showDeleted=False,
+            ).execute()
+            items = result.get('items', [])
+            if not items:
+                break
+
+            progressed = False
+            for ev in items:
+                print(f"Deleting: {ev.get('summary', '(no title)')}")
+                if self.delete_event(ev['id'], calendar_id):
+                    deleted += 1
+                    progressed = True
+                else:
+                    failed += 1
+
+            if not progressed:
+                break
+
+        return {'deleted': deleted, 'failed': failed}
+
+    def count_events(self, calendar_id='primary'):
+        # Total number of events on the calendar (for dry-run reporting).
+        total = 0
+        page_token = None
+        while True:
+            result = self.service.events().list(
+                calendarId=calendar_id,
+                maxResults=2500,
+                showDeleted=False,
+                pageToken=page_token,
+            ).execute()
+            total += len(result.get('items', []))
+            page_token = result.get('nextPageToken')
+            if not page_token:
+                break
+        return total
+
     def delete_events(self, event_ids, calendar_id='primary'):
         # Delete many events by id, tracking successes/failures.
         deleted = 0

@@ -1,11 +1,9 @@
 """Orchestrate the end-to-end schedule sync.
 
-token -> download xlsx -> parse -> wipe this script's previous events on the
-target calendar (within the schedule's date range) -> recreate from the new
-file. Wipe & recreate keeps the calendar an exact mirror of the newest xlsx.
+token -> download xlsx -> parse -> delete EVERY event on the target calendar ->
+recreate from the new file. Wiping the whole (dedicated) calendar keeps it an
+exact mirror of the newest xlsx and guarantees no leftover duplicates.
 """
-from datetime import timedelta
-
 import config
 import schedule_downloader
 import token_provider
@@ -40,16 +38,6 @@ def _download_with_retry():
         return _resolve_and_download(token)
 
 
-def _range_for(parsed_events):
-    """RFC3339 [time_min, time_max] window covering the parsed events, padded
-    by a day on each side so timezone offsets never clip the edges."""
-    starts = [e['start'] for e in parsed_events]
-    ends = [e['end'] for e in parsed_events]
-    lo = (min(starts).date() - timedelta(days=1))
-    hi = (max(ends).date() + timedelta(days=2))
-    return lo.strftime('%Y-%m-%dT00:00:00Z'), hi.strftime('%Y-%m-%dT00:00:00Z')
-
-
 def sync(dry_run=False, download=True):
     calendar_id = config.CALENDAR_ID
 
@@ -73,16 +61,22 @@ def sync(dry_run=False, download=True):
         print("No events found in schedule — aborting (calendar left untouched).")
         return
     calendar_events = EventCreator.create_batch(parsed)
-    time_min, time_max = _range_for(parsed)
-    print(f"✓ Parsed {len(parsed)} events spanning {time_min[:10]} … {time_max[:10]}")
+    print(f"✓ Parsed {len(parsed)} events")
 
-    # 4. Reconcile with the calendar.
-    print(f"\n[3/4] Checking existing events on calendar '{calendar_id}'…")
+    # Guard: wiping every event is only safe on a dedicated calendar.
+    if calendar_id == 'primary':
+        raise RuntimeError(
+            "Refusing to wipe the 'primary' calendar. Set CALENDAR_ID in .env "
+            "to a dedicated calendar for the schedule."
+        )
+
+    # 4. Wipe the whole calendar, then recreate from the new schedule.
+    print(f"\n[3/4] Inspecting calendar '{calendar_id}'…")
     api = GoogleCalendarAPI()
     api.authenticate()
-    existing = api.list_managed_events(calendar_id, time_min, time_max)
-    print(f"  Existing script events in range: {len(existing)}")
-    print(f"  Will delete: {len(existing)}   |   Will create: {len(calendar_events)}")
+    existing_count = api.count_events(calendar_id)
+    print(f"  Existing events: {existing_count}")
+    print(f"  Will delete ALL {existing_count}   |   Will create: {len(calendar_events)}")
 
     if dry_run:
         print("\nDRY RUN — no changes made. Events that would be created:")
@@ -90,10 +84,10 @@ def sync(dry_run=False, download=True):
             print(f"  + {event['summary']}")
         return
 
-    print(f"\n[4/4] Applying changes…")
-    if existing:
-        del_result = api.delete_events([e['id'] for e in existing], calendar_id)
-        print(f"  Deleted {del_result['deleted']}/{del_result['total']} old events")
+    print(f"\n[4/4] Deleting all existing events, then creating new ones…")
+    del_result = api.delete_all_events(calendar_id)
+    print(f"  Deleted {del_result['deleted']} events"
+          + (f" ({del_result['failed']} failed)" if del_result['failed'] else ""))
 
     result = api.create_events_batch(calendar_events, calendar_id)
 
