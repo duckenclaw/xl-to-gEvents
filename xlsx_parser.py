@@ -63,13 +63,15 @@ class ScheduleParser:
         date_str = str(date_str).strip()
         is_online = 'ONLINE' in date_str.upper()
 
-        # Extract date pattern
-        date_match = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', date_str)
+        # Extract date pattern; year may be 4 digits (28.02.2026) or 2 digits (2.10.26)
+        date_match = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4}|\d{2})\b', date_str)
         if not date_match:
             return None
 
-        day, month, year = date_match.groups()
-        date = datetime(int(year), int(month), int(day))
+        day, month, year = map(int, date_match.groups())
+        if year < 100:
+            year += 2000
+        date = datetime(year, month, day)
 
         return {
             'date': date,

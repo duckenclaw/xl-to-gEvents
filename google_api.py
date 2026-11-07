@@ -1,6 +1,7 @@
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 import os.path
 import pickle
@@ -22,8 +23,16 @@ class GoogleCalendarAPI:
         # If no valid credentials, let user log in
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
-                self.creds.refresh(Request())
-            else:
+                try:
+                    self.creds.refresh(Request())
+                except RefreshError as e:
+                    # Refresh token expired or revoked: drop it and re-authorize.
+                    print(f"Google token refresh failed ({e}); deleting token.pickle "
+                          f"and re-authorizing in the browser…")
+                    os.remove('token.pickle')
+                    self.creds = None
+
+            if not self.creds or not self.creds.valid:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_file, SCOPES)
                 self.creds = flow.run_local_server(port=0)
