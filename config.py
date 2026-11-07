@@ -32,7 +32,7 @@ API_BASE_URL = os.getenv('API_BASE_URL', 'https://api-dziekanat.wst.com.pl')
 
 # The file is looked up by name, because its GUID rotates on every re-upload.
 SCHEDULE_FILE_NAME = os.getenv(
-    'SCHEDULE_FILE_NAME', 'Informatyka - niestacjonarne - semestr 02'
+    'SCHEDULE_FILE_NAME', 'Informatyka - niestacjonarne - semestr 03'
 )
 
 # Listing endpoint that returns {"data": [{"id", "nazwa", ...}]}. typKataloguId=1
